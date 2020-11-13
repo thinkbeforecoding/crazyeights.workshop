@@ -21,7 +21,7 @@ let ``Game should start`` () =
     test 
         <@ []
            => StartGame { FirstCard = Three ^ Club ; Players = Players 4 }
-           == GameStarted { FirstCard = Three ^ Club; Players = Players 4 } @>
+           == [GameStarted { FirstCard = Three ^ Club; Players = Players 4 }] @>
 
 
 // Step 5:
