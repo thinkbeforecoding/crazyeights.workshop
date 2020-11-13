@@ -10,4 +10,7 @@ open Game
 let main argv =
     printfn "Crazy Eights - Functional Event Sourcing version !!"
 
+    let store = EventStore.create()
+    
+
     0 // return an integer exit code

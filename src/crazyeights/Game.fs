@@ -16,7 +16,7 @@ and GameStarted =
     { FirstCard: Card
       Players: Players}
 
-exception ToFewPlayersException
+exception TooFewPlayersException
 
 // Step 1:
 // Make the simplest implementation for the following signature
