@@ -28,7 +28,7 @@ let ``Game should start`` () =
 // Change the decide function to make this test pass
 [<Fact>]
 let ``Playing alone is not fun`` () =
-    raises<ToFewPlayersException> 
+    raises<TooFewPlayersException> 
         <@ []
             => StartGame { Players = Players 1; FirstCard = Four ^ Diamond }
         @>
