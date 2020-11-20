@@ -38,4 +38,8 @@ let decide command state =
 // Step 2:
 // Make the simplest implementation for the following signature
 // State -> Event list -> State
-let evolve state event = failwith "Not implemented" 
+
+// The simplest version of evolve is to return input state
+// This evolution functions don't evolve anything and state
+// remains the same.
+let evolve state event = state
