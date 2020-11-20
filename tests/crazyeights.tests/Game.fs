@@ -25,6 +25,8 @@ let notImplemented() = failwith "No implemented"
 
 // Step 4:
 // Change the decide function to make this test pass
+
+// we just have to return a GameStarted event every time in decide
 [<Fact>]
 let ``Game should start`` () =
     test 

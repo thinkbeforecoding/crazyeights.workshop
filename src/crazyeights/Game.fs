@@ -41,7 +41,14 @@ let initialState = InitialState
 //  So errors should not happen except in case of bugs.
 //  Exception are perfect for bugs.
 let decide command state = 
-    []
+
+    // for step 4, we have a single command StartGame
+    // the test says that we should get a GameStarted event
+    // with the same values... so we dont need more logic
+
+    match command with
+    | StartGame cmd -> 
+        [ GameStarted { Players = cmd.Players; FirstCard = cmd.FirstCard }]
 
 
 // Step 2:
