@@ -4,17 +4,26 @@ open Deck
 
 type Command =
     | StartGame of StartGame
+    | Play of Play
 
 and StartGame =
     { FirstCard: Card
       Players: Players }
 
+and Play =
+    { Card: Card }
+
 type Event =
     | GameStarted of GameStarted
+    | Played of Played
 
 and GameStarted =
     { FirstCard: Card
       Players: Players}
+
+and Played =
+    { Card: Card}
+
 
 exception TooFewPlayersException
 
@@ -59,6 +68,11 @@ let decide command state =
 
     | Started, StartGame _ ->
         raise GameAlreadyStartedException
+
+    // for step 7, we can just return a Played event
+    // for any Play command... we don't test more
+    | _, Play cmd ->
+        [ Played { Card = cmd.Card} ]
 
 
 // Step 2:

@@ -74,13 +74,27 @@ let ``Game should not be started twice``() =
 
 // Step 7:
 // Make this two tests pass... doing the simplest thing that work
+
+// we create a Play command and a Played event, and write the test
+// it says that when the game started with a 3♣ and the we play a 3♠
+// an Played event should be returned
+
+// then in the decide function, we simply return a Played event for any
+// Play command... we don't test more than this
 [<Fact>]
 let ``Card with same value can be played``() =
-    notImplemented()
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 } ]
+           => Play { Card = Three ^ Spade}
+           == [ Played { Card = Three ^ Spade }] @>
 
+// this test does the same thing with a 3♣ and a 4♣
 [<Fact>]
 let ``Card with same suit can be played``() =
-    notImplemented()
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 } ]
+           => Play { Card = Four ^ Club}
+           == [ Played { Card = Four ^ Club }] @>
 
 // Step 8:
 // Make this test pass
