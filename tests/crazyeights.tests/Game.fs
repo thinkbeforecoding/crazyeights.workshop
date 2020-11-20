@@ -55,9 +55,18 @@ let ``Playing alone is not fun`` () =
 
 // Step 6:
 // What should you change to make this test pass ?
+
+// we create a GameAlreadyStartedException
+// but this time we need to remember that the game already started
+// to take the decision
+// we add a Started case to the State type
+// now we can take a different decision in decide depending on the
+// current state
+// of course we have to also modify evolve to that state becomes
+// Started after a GameStarted event
 [<Fact>]
 let ``Game should not be started twice``() =
-    raises (*<what exception ?>*)
+    raises<GameAlreadyStartedException>
         <@ [ GameStarted { Players= Players 2; FirstCard = Six ^ Spade } ]
             => StartGame { Players = Players 3; FirstCard = Ace ^ Heart }
         @>
