@@ -8,7 +8,16 @@ open Swensen.Unquote
 
 // Step 3:
 // Implement => to make the test run
-let (=>) events command = failwith "Not implemented"
+// We use List.fold with evolve, initialized and given events
+// fold start from the initialState, and for each event, call
+// evolve with the state and the event to compute a new state
+// The fold returns current state. We pass it to decide with
+// the command to get a list of the events
+let (=>) events command = 
+    events
+    |> List.fold evolve initialState
+    |> decide command
+    
 
 let (==) = (=)
 

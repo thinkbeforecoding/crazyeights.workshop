@@ -18,6 +18,15 @@ and GameStarted =
 
 exception TooFewPlayersException
 
+// We create a type for the state
+// but for now, we don't have to remember
+// anything.. so or State has a single value:
+// InitialState...
+type State =
+    | InitialState
+
+let initialState = InitialState
+
 // Step 1:
 // Make the simplest implementation for the following signature
 // Command -> State -> Event list
