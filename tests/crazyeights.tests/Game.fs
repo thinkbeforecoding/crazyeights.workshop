@@ -37,6 +37,15 @@ let ``Game should start`` () =
 
 // Step 5:
 // Change the decide function to make this test pass
+
+// we can do basic validation in the decide function
+// notice that this exception should never actually happen
+// since the game interface would prevent starting the game
+// when there are less than 2 players
+// we still enforce the check in case of a bug, or if a user
+// with bad intention tries to trick the system
+// we could also avoid validation in the decide function
+// by validating the data in the Players structure's constructor
 [<Fact>]
 let ``Playing alone is not fun`` () =
     raises<TooFewPlayersException> 

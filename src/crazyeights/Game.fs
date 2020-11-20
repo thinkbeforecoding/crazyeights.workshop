@@ -48,6 +48,9 @@ let decide command state =
 
     match command with
     | StartGame cmd -> 
+        if cmd.Players < Players 2 then
+            raise TooFewPlayersException
+
         [ GameStarted { Players = cmd.Players; FirstCard = cmd.FirstCard }]
 
 
