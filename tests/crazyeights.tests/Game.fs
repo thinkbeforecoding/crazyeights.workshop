@@ -32,7 +32,7 @@ let ``Game should start`` () =
     test 
         <@ []
            => StartGame { FirstCard = Three ^ Club ; Players = Players 4 }
-           == [GameStarted { FirstCard = Three ^ Club; Players = Players 4 }] @>
+           == [GameStarted { FirstCard = Three ^ Club; Effect = Next; Players = Players 4 }] @>
 
 
 // Step 5:
@@ -67,7 +67,7 @@ let ``Playing alone is not fun`` () =
 [<Fact>]
 let ``Game should not be started twice``() =
     raises<GameAlreadyStartedException>
-        <@ [ GameStarted { Players= Players 2; FirstCard = Six ^ Spade } ]
+        <@ [ GameStarted { Players= Players 2; Effect = Next; FirstCard = Six ^ Spade } ]
             => StartGame { Players = Players 3; FirstCard = Ace ^ Heart }
         @>
 
@@ -84,17 +84,17 @@ let ``Game should not be started twice``() =
 [<Fact>]
 let ``Card with same value can be played``() =
     test 
-        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 } ]
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 } ]
            => Play { Card = Three ^ Spade; Player = Player 1}
-           == [ Played { Card = Three ^ Spade; Player = Player 1 }] @>
+           == [ Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }] @>
 
 // this test does the same thing with a 3♣ and a 4♣
 [<Fact>]
 let ``Card with same suit can be played``() =
     test 
-        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 } ]
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 } ]
            => Play { Card = Four ^ Club; Player = Player 1}
-           == [ Played { Card = Four ^ Club; Player = Player 1 }] @>
+           == [ Played { Card = Four ^ Club; Effect = Next; Player = Player 1 }] @>
 
 // Step 8:
 // Make this test pass
@@ -138,9 +138,9 @@ let ``Card can be played only once game is started``() =
 [<Fact>]
 let ``Card should be same suit or same value``() =
    test 
-       <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 } ]
+       <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 } ]
           => Play { Card = Four ^ Diamond; Player = Player 1 }
-          == [ WrongCardPlayed { Card = Four ^ Diamond; Player = Player 1 }] @>
+          == [ WrongCardPlayed { Card = Four ^ Diamond; Effect = Next; Player = Player 1 }] @>
  
     // ...
 
@@ -159,35 +159,35 @@ let ``Card should be same suit or same value``() =
 [<Fact>]
 let ``Player should play during her turn``() =
     test 
-        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 }
-             Played { Card = Three ^ Spade; Player = Player 1 }  // P1 3♠
-             Played { Card = Four ^ Spade; Player = Player 2}    // P2 4♠
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             Played { Card = Four ^ Spade; Effect = Next; Player = Player 2}    // P2 4♠
              ]
            => Play { Card = Four ^ Diamond; Player = Player 3 } // this is P3's turn
-           == [ Played { Card = Four ^ Diamond; Player = Player 3 }] @>
+           == [ Played { Card = Four ^ Diamond; Effect = Next; Player = Player 3 }] @>
 
 // to check what happens when 
 [<Fact>]
 let ``Player should play during their turn or they get an error``() =
     test 
-        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 }
-             Played { Card = Three ^ Spade; Player = Player 1 }  // P1 3♠
-             Played { Card = Four ^ Spade; Player = Player 2}    // P2 4♠
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             Played { Card = Four ^ Spade; Effect = Next; Player = Player 2}    // P2 4♠
              ]
            => Play { Card = Four ^ Diamond; Player = Player 1 } // this is P3's turn, but P1 plays
            // P1 gets a WrongPlayerPlayed event even if the card was correct
-           == [ WrongPlayerPlayed { Card = Four ^ Diamond; Player = Player 1 }] @>
+           == [ WrongPlayerPlayed { Card = Four ^ Diamond; Effect = Next; Player = Player 1 }] @>
 
 [<Fact>]
 let ``After a table round, the dealer turn plays``() =
     test 
-        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 }
-             Played { Card = Three ^ Spade; Player = Player 1 }  // P1 3♠
-             Played { Card = Four ^ Spade; Player = Player 2}    // P2 4♠
-             Played { Card = Six ^ Spade; Player = Player 3}    // P3 6♠
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             Played { Card = Four ^ Spade; Effect = Next; Player = Player 2}    // P2 4♠
+             Played { Card = Six ^ Spade; Effect = Next; Player = Player 3}    // P3 6♠
              ]
            => Play { Card = Six ^ Diamond; Player = Player 0 } // this is P0's turn
-           == [ Played { Card = Six ^ Diamond; Player = Player 0 }] @>
+           == [ Played { Card = Six ^ Diamond; Effect = Next; Player = Player 0 }] @>
 
 // Step 12:
 // Look at the evolve function...
@@ -209,9 +209,66 @@ let ``After a table round, the dealer turn plays``() =
 
 // Step 13:
 // Seven skips next player turn
+
+// the test is easy to write, P2 playes a 7, it skips player's 3 turn, and
+// P0 must play. As long as we change nothing, the test will fail because
+// until introducing this new rule, it was player's 3 turn
+
+// we introduce a skip function in the table module that is just (next >> next)
+
+// the simplest way to make this test pass would be to test in the evolve function
+// if the card is a seven, and call skip instead of next to compute the next player
+
+// but it would be a mistake. first, if some games are currently played, and we
+// put the new code in production, the game would suddenly compute a different
+// current player! that would break the game. To rebuild the game we would have
+// to use the old rule for events emited before, and the new rule for new events.
+// it would get worse if at some point we decide that is not 7 that skips player turn
+// but 3. We would now have 3 version of the evolve function....
+
+// to fix this, we have to decide what happens in the decide function and indicate
+// the result in the event. this way, we can just use this information from the event
+// and use it in the evolve function. If we change the rule, we change the decide function
+// but emitted event still contain the result of old decision. No need to change and version
+// the evolve function
+
+
+// for instance we could compute the next player in the decide function and put it
+// in the Played event. This way, we could just use it in the evolve function without
+// having to compute anything
+
+// this is functional, but we the event would give more the result than what was intended
+// the extrem would be a decide function that compute every time the next state, and the evolve
+// function that just use the state in the event as the next state... it looses the "change"
+// aspect of the event
+
+// here, we can put in the event the "effect" of the card: Next or Skip, and use this
+// in the evolve function to compute the player.. Next and Skip will always keep the same
+// meaning, so it will be stable. The decide function determines what card have what effect
+// and the evolve function applies the effect always in the same manner
+
+// if some games are in progress, and also for all games, there will be no effect in the
+// Played event, when deserializing, we can use de default value Next because it was the way
+// it worked before we introduce it
 [<Fact>]
 let ``Seven skips next player turn``() =
-    notImplemented()
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             Played { Card = Seven ^ Spade; Effect = Skip; Player = Player 2}    // P2 7♠ it skips P3 turn
+             ]
+           => Play { Card = Six ^ Spade; Player = Player 0 } // this is P0's turn
+           == [ Played { Card = Six ^ Spade; Effect = Next; Player = Player 0 }] @>
+
+// we have to also check that the effect of a seven is a skip
+[<Fact>]
+let ``Seven is a skip``() =
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             ]
+           => Play { Card = Seven ^ Spade; Player = Player 2 } // this is P0's turn
+           == [ Played { Card = Seven ^ Spade; Effect = Skip; Player = Player 2 }] @>
 
 
 // Step 14:

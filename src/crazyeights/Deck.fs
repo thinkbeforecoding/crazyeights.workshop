@@ -19,6 +19,16 @@ let (^) rank suit = { Rank = rank; Suit = suit }
 type Player = Player of int
 type Players = Players of int
 
+// we introduce card Effect for step 13
+type CardEffect =
+    | Next
+    | Skip
+
+module CardEffect =
+    let ofCard card =
+        match card.Rank with
+        | Seven -> Skip
+        | _ -> Next
 
 // we introduce the Table type for Step 12
 // it will define an algebra with (Table -> Table) functions
@@ -37,3 +47,11 @@ module Table =
         let { CurrentPlayer = Player currentPlayer
               Players = Players players } = table
         { table with CurrentPlayer = Player ( (currentPlayer + 1) % players) }
+
+    // skips next player turn by applying next twice for step 13
+    let skip = next >> next
+
+    let applyEffect effect table =
+        match effect with
+        | Next -> next table
+        | Skip -> skip table

@@ -22,13 +22,18 @@ type Event =
     | WrongCardPlayed of Played
     | WrongPlayerPlayed of Played
 
+// when the game starts with a 7 we need to skip first player's turn
+// so we also put the effect here for step 13
 and GameStarted =
     { FirstCard: Card
+      Effect: CardEffect
       Players: Players}
 
-// we also add the player to the event to remember who played
+// we add the effect for step 13. The deserializer should use
+// default value Next for events emitted before the new rule
 and Played =
     { Card: Card 
+      Effect: CardEffect
       Player: Player }
 
 
@@ -49,9 +54,6 @@ type State =
     | InitialState
     | Started of Started
 
-// for step 10, we have to remember current player
-// but also the number of players around the table
-// to be able to know when we made a full round
 and Started =
     { TopCard: Card
       Table: Table }
@@ -80,7 +82,9 @@ let decide command state =
         if cmd.Players < Players 2 then
             raise TooFewPlayersException
 
-        [ GameStarted { Players = cmd.Players; FirstCard = cmd.FirstCard }]
+        [ GameStarted { Players = cmd.Players
+                        Effect = CardEffect.ofCard cmd.FirstCard
+                        FirstCard = cmd.FirstCard }]
 
     | Started _, StartGame _ ->
         raise GameAlreadyStartedException
@@ -93,13 +97,20 @@ let decide command state =
         // for step 10, we have to check the player that is playing the card
         if s.Table.CurrentPlayer <> cmd.Player then
             // oops this this not this players turn !!
-            [ WrongPlayerPlayed { Card = cmd.Card; Player = cmd.Player}  ]
+            [ WrongPlayerPlayed { Card = cmd.Card
+                                  Effect = CardEffect.ofCard cmd.Card
+                                  Player = cmd.Player}  ]
         elif s.TopCard.Rank = cmd.Card.Rank || s.TopCard.Suit = cmd.Card.Suit then
             // this is same rank or same suit, the card is played
-            [ Played { Card = cmd.Card; Player = cmd.Player} ]
+            // for step 13, we compute the effect of the card
+            [ Played { Card = cmd.Card
+                       Effect = CardEffect.ofCard cmd.Card
+                       Player = cmd.Player} ]
         else
             // this should be same rank or same suit!
-            [ WrongCardPlayed { Card = cmd.Card; Player = cmd.Player }]
+            [ WrongCardPlayed { Card = cmd.Card
+                                Effect = CardEffect.ofCard cmd.Card
+                                Player = cmd.Player }]
 
     // With a narrower match above, we can match on
     // combination that should not happen
@@ -121,15 +132,17 @@ let evolve state event =
     // the player next to the dealer (Player 0) plays first
     // we also store the number of Players to go back to the dealer
     // after a table round
-    | _, GameStarted e -> Started { TopCard = e.FirstCard; Table = Table.start e.Players |> Table.next }
 
-    // here when the game is started we have access to
-    // the number of players
+    // when the game starts with a 7, it skips first player's turn, so
+    // we use Table.applyEffect 
+    | _, GameStarted e -> 
+        Started { TopCard = e.FirstCard
+                  Table = Table.start e.Players |> Table.applyEffect e.Effect }
+
     | Started s, Played e -> 
         Started { s with TopCard = e.Card
-                         // and we compute the new current player using
-                         // a modulo
-                         Table = Table.next s.Table
+                         // we apply effect decided in the decide function
+                         Table = Table.applyEffect e.Effect s.Table
                     }
 
     // we catch all other cases here

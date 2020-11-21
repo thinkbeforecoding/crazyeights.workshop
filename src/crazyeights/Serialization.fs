@@ -68,29 +68,71 @@ module Card =
         let suit = Suit.deserialize (input.Substring(input.Length - 1))
         rank ^ suit
 
+module CardEffect =
+    let serialize effect =
+        match effect with
+        | Next -> "Next"
+        | Skip -> "Skip"
+
+    let deserialize effect =
+        match effect with
+        | "Next" -> Next
+        | "Skip" -> Skip
+        | _ -> failwith "Unknown effect"
+
 
 
 type GameStartedDto =
     { FirstCard: string 
+      Effect: string // it will be null for old events
       Players: int }
 
 module GameStarted =
     let serialize (cmd: GameStarted) : GameStartedDto=
         let (Players p) = cmd.Players 
         { FirstCard = Card.serialize cmd.FirstCard
+          Effect = CardEffect.serialize cmd.Effect
           Players = p }
 
     let deserialize (dto: GameStartedDto) : GameStarted =
         { FirstCard = Card.deserialize dto.FirstCard 
+          // when Effect is null in the dto, we use Next
+          Effect = if isNull dto.Effect then Next else CardEffect.deserialize dto.Effect
           Players = Players dto.Players}
+
+
+type PlayedDto =
+    { Card: string 
+      Effect: string // it will be null for old events
+      Player: int }
+
+module Played =
+    let serialize (cmd: Played) : PlayedDto =
+        let (Player p) = cmd.Player 
+        { Card = Card.serialize cmd.Card
+          Effect = CardEffect.serialize cmd.Effect
+          Player = p }
+
+    let deserialize (dto: PlayedDto) : Played =
+        { Card = Card.deserialize dto.Card
+          // when Effect is null in the dto, we use Next
+          Effect = if isNull dto.Effect then Next else CardEffect.deserialize dto.Effect
+          Player = Player dto.Player}
+
 
 
 let serialize =
     function 
     | GameStarted e -> "GameStarted", Json.serialize (GameStarted.serialize e)
+    | Played e -> "Played", Json.serialize (Played.serialize e)
+    | WrongCardPlayed e -> "WrongCardPlayed", Json.serialize (Played.serialize e)
+    | WrongPlayerPlayed e -> "WrongPlayerPlayed", Json.serialize (Played.serialize e)
 
 
 let deserialize (eventType, data) =
     match eventType with
     | "GameStarted" -> [Json.deserialize GameStarted GameStarted.deserialize data]
+    | "Played" -> [Json.deserialize Played Played.deserialize data]
+    | "WrongCardPlayed" -> [Json.deserialize WrongCardPlayed Played.deserialize data]
+    | "WrongPlayerPlayed" -> [Json.deserialize WrongPlayerPlayed Played.deserialize data]
     | _ -> []
