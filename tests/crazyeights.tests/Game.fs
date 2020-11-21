@@ -98,9 +98,16 @@ let ``Card with same suit can be played``() =
 
 // Step 8:
 // Make this test pass
+
+// here, this is again a case of something that should never happen
+// so we expect an exception
+// so we create a new exception
+// We use the pattern matching on the state to detect the situation
 [<Fact>]
 let ``Card can be played only once game is started``() =
-    notImplemented()
+    raises<GameNotYetStarted>
+        <@ []
+           => Play { Card = Four ^ Club} @>
 
 // Step 9:
 // What happens here ?!

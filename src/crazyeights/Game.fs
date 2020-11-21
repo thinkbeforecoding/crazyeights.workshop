@@ -29,6 +29,8 @@ exception TooFewPlayersException
 
 exception GameAlreadyStartedException
 
+// this exception is introduced for step 8
+exception GameNotYetStarted
 // We create a type for the state
 // but for now, we don't have to remember
 // anything.. so or State has a single value:
@@ -59,7 +61,7 @@ let decide command state =
     // for step 6, we do the pattern matching on
     // both state and command
 
-    match state,command with
+    match state, command with
     | InitialState, StartGame cmd -> 
         if cmd.Players < Players 2 then
             raise TooFewPlayersException
@@ -71,8 +73,14 @@ let decide command state =
 
     // for step 7, we can just return a Played event
     // for any Play command... we don't test more
-    | _, Play cmd ->
+    // for step 8, we make a narrower match
+    | Started, Play cmd ->
         [ Played { Card = cmd.Card} ]
+
+    // With a narrower match above, we can match on
+    // combination that should not happen
+    | InitialState, Play _ ->
+        raise GameNotYetStarted
 
 
 // Step 2:
