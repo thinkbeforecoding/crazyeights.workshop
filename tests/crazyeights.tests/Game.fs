@@ -85,16 +85,16 @@ let ``Game should not be started twice``() =
 let ``Card with same value can be played``() =
     test 
         <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 } ]
-           => Play { Card = Three ^ Spade}
-           == [ Played { Card = Three ^ Spade }] @>
+           => Play { Card = Three ^ Spade; Player = Player 1}
+           == [ Played { Card = Three ^ Spade; Player = Player 1 }] @>
 
 // this test does the same thing with a 3♣ and a 4♣
 [<Fact>]
 let ``Card with same suit can be played``() =
     test 
         <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 } ]
-           => Play { Card = Four ^ Club}
-           == [ Played { Card = Four ^ Club }] @>
+           => Play { Card = Four ^ Club; Player = Player 1}
+           == [ Played { Card = Four ^ Club; Player = Player 1 }] @>
 
 // Step 8:
 // Make this test pass
@@ -107,7 +107,7 @@ let ``Card with same suit can be played``() =
 let ``Card can be played only once game is started``() =
     raises<GameNotYetStarted>
         <@ []
-           => Play { Card = Four ^ Club} @>
+           => Play { Card = Four ^ Club; Player = Player 1} @>
 
 // Step 9:
 // What happens here ?!
@@ -139,21 +139,55 @@ let ``Card can be played only once game is started``() =
 let ``Card should be same suit or same value``() =
    test 
        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 } ]
-          => Play { Card = Four ^ Diamond }
-          == [ WrongCardPlayed { Card = Four ^ Diamond }] @>
+          => Play { Card = Four ^ Diamond; Player = Player 1 }
+          == [ WrongCardPlayed { Card = Four ^ Diamond; Player = Player 1 }] @>
  
     // ...
 
 // Step 10:
 // What happens here ?!
+
+// for this one, we need to remember which player should be playing
+// for the second test, we can use a modulo
+
+// of course we need to add player id to the command. This way we
+// know which players plays the card. we need to updte previous tests for this
+
+// here again we will return an event instead of an exception
+// this will happen that some players will play out of their turn
+// when this happens, the players will get a penalty
 [<Fact>]
 let ``Player should play during her turn``() =
-    notImplemented()
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 }
+             Played { Card = Three ^ Spade; Player = Player 1 }  // P1 3♠
+             Played { Card = Four ^ Spade; Player = Player 2}    // P2 4♠
+             ]
+           => Play { Card = Four ^ Diamond; Player = Player 3 } // this is P3's turn
+           == [ Played { Card = Four ^ Diamond; Player = Player 3 }] @>
 
+// to check what happens when 
+[<Fact>]
+let ``Player should play during their turn or they get an error``() =
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 }
+             Played { Card = Three ^ Spade; Player = Player 1 }  // P1 3♠
+             Played { Card = Four ^ Spade; Player = Player 2}    // P2 4♠
+             ]
+           => Play { Card = Four ^ Diamond; Player = Player 1 } // this is P3's turn, but P1 plays
+           // P1 gets a WrongPlayerPlayed event even if the card was correct
+           == [ WrongPlayerPlayed { Card = Four ^ Diamond; Player = Player 1 }] @>
 
 [<Fact>]
 let ``After a table round, the dealer turn plays``() =
-    notImplemented()
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 }
+             Played { Card = Three ^ Spade; Player = Player 1 }  // P1 3♠
+             Played { Card = Four ^ Spade; Player = Player 2}    // P2 4♠
+             Played { Card = Six ^ Spade; Player = Player 3}    // P3 6♠
+             ]
+           => Play { Card = Six ^ Diamond; Player = Player 0 } // this is P0's turn
+           == [ Played { Card = Six ^ Diamond; Player = Player 0 }] @>
 
 // Step 12:
 // Look at the evolve function...
@@ -161,6 +195,17 @@ let ``After a table round, the dealer turn plays``() =
 // Try to remove the logic from the evolve function 
 // to put it back in the decide function 
 
+// the code in the evolve function computes the next player...
+// this is not a problem for now, but it will become one when
+// we introduce special cards, like 7 which skips next player turn
+// or jack that flips direction...
+
+// first we can extract a part of the logic by puting it in a separate module
+// we introduce a Table type with a next function that computes the next state
+// of the table. It will act like a small algebra
+
+// next table is always computed in the evolve function but we'll discuss what
+// we can do in next step
 
 // Step 13:
 // Seven skips next player turn

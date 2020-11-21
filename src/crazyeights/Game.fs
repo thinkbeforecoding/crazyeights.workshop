@@ -10,20 +10,26 @@ and StartGame =
     { FirstCard: Card
       Players: Players }
 
+// for step 10 we add the player that plays the card
 and Play =
-    { Card: Card }
+    { Card: Card
+      Player: Player}
 
+// we introduce the WrongPlayerPlayed event for step 10
 type Event =
     | GameStarted of GameStarted
     | Played of Played
     | WrongCardPlayed of Played
+    | WrongPlayerPlayed of Played
 
 and GameStarted =
     { FirstCard: Card
       Players: Players}
 
+// we also add the player to the event to remember who played
 and Played =
-    { Card: Card}
+    { Card: Card 
+      Player: Player }
 
 
 exception TooFewPlayersException
@@ -42,11 +48,13 @@ exception GameNotYetStarted
 type State =
     | InitialState
     | Started of Started
-// for step 9, we need to remember the card on the
-// top of the game, there is no card ini the InitialState
-// but there is always a TopCard once started
+
+// for step 10, we have to remember current player
+// but also the number of players around the table
+// to be able to know when we made a full round
 and Started =
-    { TopCard: Card}
+    { TopCard: Card
+      Table: Table }
 
 let initialState = InitialState
 
@@ -81,15 +89,17 @@ let decide command state =
     // for any Play command... we don't test more
     // for step 8, we make a narrower match
     | Started s, Play cmd ->
-        // now that the Started case contains more information
-        // as the top card we can use it to compare the TopCard
-        // to the card beeing played
-        if s.TopCard.Rank = cmd.Card.Rank || s.TopCard.Suit = cmd.Card.Suit then
+
+        // for step 10, we have to check the player that is playing the card
+        if s.Table.CurrentPlayer <> cmd.Player then
+            // oops this this not this players turn !!
+            [ WrongPlayerPlayed { Card = cmd.Card; Player = cmd.Player}  ]
+        elif s.TopCard.Rank = cmd.Card.Rank || s.TopCard.Suit = cmd.Card.Suit then
             // this is same rank or same suit, the card is played
-            [ Played { Card = cmd.Card} ]
+            [ Played { Card = cmd.Card; Player = cmd.Player} ]
         else
             // this should be same rank or same suit!
-            [ WrongCardPlayed { Card = cmd.Card }]
+            [ WrongCardPlayed { Card = cmd.Card; Player = cmd.Player }]
 
     // With a narrower match above, we can match on
     // combination that should not happen
@@ -105,18 +115,24 @@ let decide command state =
 // This evolution functions don't evolve anything and state
 // remains the same.
 let evolve state event = 
-    // you can can notice that there was a warning here
-    // we introduced a Played event before and never match it
-    // here. we could have added a _ -> state catch clause to
-    // do nothing. But this is a good idea to keep a complete
-    // and precise pattern matching, and pass this warning as
-    // an error
+    // this time we will modidy previous state, so we will 
+    // match also on state to be able to deconstruct it
+    match state,event with
+    // the player next to the dealer (Player 0) plays first
+    // we also store the number of Players to go back to the dealer
+    // after a table round
+    | _, GameStarted e -> Started { TopCard = e.FirstCard; Table = Table.start e.Players |> Table.next }
 
-    match event with
-    // for step 9, we have to put in the state
-    // the first card as the top card
-    | GameStarted e -> Started { TopCard = e.FirstCard }
-    // we also have to remember when a card is played
-    | Played e -> Started { TopCard = e.Card }
-    // when WrongCardPlayed this doesn't change the state of the game
-    | WrongCardPlayed _ -> state
+    // here when the game is started we have access to
+    // the number of players
+    | Started s, Played e -> 
+        Started { s with TopCard = e.Card
+                         // and we compute the new current player using
+                         // a modulo
+                         Table = Table.next s.Table
+                    }
+
+    // we catch all other cases here
+    | InitialState, Played _ 
+    | _, WrongCardPlayed _ 
+    | _, WrongPlayerPlayed _ -> state
