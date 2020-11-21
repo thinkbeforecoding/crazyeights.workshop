@@ -111,9 +111,37 @@ let ``Card can be played only once game is started``() =
 
 // Step 9:
 // What happens here ?!
+
+// it would be tempting to create a new exception here
+// that would be right if the game interface disallowed
+// playing a wrong card, for instance by limiting player
+// to only play valid cards
+
+// but this is usually not what will happen, players have
+// to follow the game and play the right cards
+
+// for instance when a player plays a wrong card (neither
+// same color nor same suit) they should take a penalty of
+// two cards
+
+// this is the sign that we should introduce a new event here
+
+// we create a WrongCardPlayed event
+
+// you can also notice that we introduced a new event but
+// didn't create a new command
+
+// now, to take the decision, we have to remember the previous
+// card ! So we need to store it in the Started case. It will
+// be updated in the evolve function when the GameStarted and
+// when a card has been Played.
 [<Fact>]
 let ``Card should be same suit or same value``() =
-    notImplemented()
+   test 
+       <@ [ GameStarted { FirstCard = Three ^ Club ; Players = Players 4 } ]
+          => Play { Card = Four ^ Diamond }
+          == [ WrongCardPlayed { Card = Four ^ Diamond }] @>
+ 
     // ...
 
 // Step 10:
