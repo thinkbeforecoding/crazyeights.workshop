@@ -273,9 +273,35 @@ let ``Seven is a skip``() =
 
 // Step 14:
 // Jack flip direction
+
+// for this one, we need to introduce an new effect on Jack
+// to reverse the direction of the game
+
+// we'll need to introduce a notion of direction inside the
+// Table type, but since we don't save state and Table never
+// appears in events, this addition is totally safe !
+
+// again we have one test to check what happens when someone plaus a jack
+// and one when a player plays after a jack
+
 [<Fact>]
 let ``Jack flip direction``() =
-    notImplemented()
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             Played { Card = Jack ^ Spade; Effect = Flip; Player = Player 2}    // P2 7♠ it flips direction
+             ]
+           => Play { Card = Six ^ Spade; Player = Player 1 } // this is P1's turn
+           == [ Played { Card = Six ^ Spade; Effect = Next; Player = Player 1 }] @>
+
+[<Fact>]
+let ``Jack effect is flip``() =
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             ]
+           => Play { Card = Jack ^ Spade; Player = Player 2 } // this is P2's turn
+           == [ Played { Card = Jack ^ Spade; Effect = Flip; Player = Player 2 }] @>
 
 
 // Step 15:
