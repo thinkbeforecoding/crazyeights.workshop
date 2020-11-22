@@ -21,6 +21,7 @@ type Event =
     | Played of Played
     | WrongCardPlayed of Played
     | WrongPlayerPlayed of Played
+    | InterruptMissed of Played
 
 // when the game starts with a 7 we need to skip first player's turn
 // so we also put the effect here for step 13
@@ -54,8 +55,9 @@ type State =
     | InitialState
     | Started of Started
 
+// for step 16, we change the TopCard by a Pile
 and Started =
-    { TopCard: Card
+    { Pile: Pile
       Table: Table }
 
 let initialState = InitialState
@@ -97,17 +99,24 @@ let decide command state =
         // for step 10, we have to check the player that is playing the card
         if s.Table.CurrentPlayer <> cmd.Player then
             // check whether it's an interrupt:
-            if s.TopCard.Rank = cmd.Card.Rank && s.TopCard.Suit = cmd.Card.Suit then
+            if s.Pile.TopCard = cmd.Card then
                 // this is a valid interrupt, the card is played
                 [ Played { Card = cmd.Card
                            Effect = Interrupt
                            Player = cmd.Player}]
+
+            // else check if next card is same as played card
+            elif s.Pile.NextCard = Some cmd.Card then
+                // this is a missed interrupt
+                [ InterruptMissed { Card = cmd.Card
+                                    Effect = Interrupt
+                                    Player = cmd.Player } ]
             else
                 // oops this this not this players turn !!
                 [ WrongPlayerPlayed { Card = cmd.Card
                                       Effect = CardEffect.ofCard cmd.Card
                                       Player = cmd.Player}  ]
-        elif s.TopCard.Rank = cmd.Card.Rank || s.TopCard.Suit = cmd.Card.Suit then
+        elif s.Pile.TopCard.Rank = cmd.Card.Rank || s.Pile.TopCard.Suit = cmd.Card.Suit then
             // this is same rank or same suit, the card is played
             // for step 13, we compute the effect of the card
             [ Played { Card = cmd.Card
@@ -143,11 +152,11 @@ let evolve state event =
     // when the game starts with a 7, it skips first player's turn, so
     // we use Table.applyEffect 
     | _, GameStarted e -> 
-        Started { TopCard = e.FirstCard
+        Started { Pile = Pile.start e.FirstCard
                   Table = Table.start e.Players |> Table.applyEffect e.Effect }
 
     | Started s, Played e -> 
-        Started { s with TopCard = e.Card
+        Started { s with Pile = Pile.put e.Card s.Pile
                          // we apply effect decided in the decide function
                          Table = Table.applyEffect e.Effect s.Table
                     }
@@ -155,4 +164,5 @@ let evolve state event =
     // we catch all other cases here
     | InitialState, Played _ 
     | _, WrongCardPlayed _ 
-    | _, WrongPlayerPlayed _ -> state
+    | _, WrongPlayerPlayed _ 
+    | _, InterruptMissed _-> state

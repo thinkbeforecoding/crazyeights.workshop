@@ -348,8 +348,26 @@ let ``After an interrupt, game continues as if nothing happened``() =
 // Step 16:
 // Missing an interrupt is not concidered as playing at the wrong turn.
 // So what happens here ?
+
+// it sometimes happen that a player tried to play a card to interrupt
+// but the next player played before.
+// when this happens, it's not the turn of the player who tried to interrupt,
+// and the card is not same value and same rank, so a WrongPlayerPlayed event
+// is returned which would trigger a penalty
+
+// to emit a different event in the case, we have to check with the card just bellow
+// the top card. if it matches the card played, this is a missed interrupt
+
+// to implement this, we have keep the two top cards in the game, and we will
+// create a new Pile type to manage this without bloating the game
+
 [<Fact>]
 let ``Player get no penalty when missing an interrupt``() =
-    notImplemented()
-
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             Played { Card = Four ^ Spade; Effect = Next; Player = Player 2} // p2 4♠
+             ]
+           => Play { Card = Three ^ Spade; Player = Player 0 } // p0 wanted to interrupt on p1, but p2 was faster
+           == [ InterruptMissed { Card = Three ^ Spade; Effect = Interrupt; Player = Player 0 }] @>
 

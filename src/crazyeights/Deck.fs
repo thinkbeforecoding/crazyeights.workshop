@@ -89,3 +89,22 @@ module Table =
         | Skip -> skip table
         | Flip -> flip table
         | Interrupt -> table
+
+// for step 16 we introduce a Pile type
+// it always has a TopCard, and each time we
+// put a new card on it, the TopCard becomes NextCard
+// and the new card becomes TopCard
+type Pile =
+    { TopCard: Card
+      NextCard: Card option }
+
+module Pile =
+    // this starts the Pile with a single card
+    let start card =
+        { TopCard = card
+          NextCard = None}
+
+    // put a new card on top of the pile
+    let put card pile =
+        { TopCard = card
+          NextCard = Some pile.TopCard }
