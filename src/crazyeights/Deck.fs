@@ -20,12 +20,15 @@ type Player = Player of int
 type Players = Players of int
 
 // we introduce card Effect for step 13
-// we introduce flip for setp 14
+// we introduce flip for step 14
+// we introduce interrupt for step 15 
 type CardEffect =
     | Next
     | Skip
     | Flip
+    | Interrupt
 
+// notice that interrupt is not tied to a specific card
 module CardEffect =
     let ofCard card =
         match card.Rank with
@@ -79,8 +82,10 @@ module Table =
         
 
     // for step 14, we add the flip effect
+    // in setp 15, interrupt does change current table
     let applyEffect effect table =
         match effect with
         | Next -> next table
         | Skip -> skip table
         | Flip -> flip table
+        | Interrupt -> table

@@ -306,9 +306,44 @@ let ``Jack effect is flip``() =
 
 // Step 15:
 // Make this test pass
+
+// at any moment, when a player has a card with same rank AND same suit
+// they can play their card even if it's not their turn
+// the card is played but this doesn't affect current player
+
+// to implement this, we don't have to introduce a new command
+// the player just plays the card
+// the decision function accepts it even if it's not the current player
+// only if it has same rank and suit.
+
+// we need to introduce a new effect so that it doesn't affect current players
+// turn
+
+// the test check that even if it's not p3's turn, p3 can play the card
+// because it's same rank and suit
+
+
+// we also add a test to check that after the interrupt, it's still
+// p2's turn
 [<Fact>]
 let ``Player can interrupt``() =
-    notImplemented()
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             ]
+           => Play { Card = Three ^ Spade; Player = Player 3 } // this is P1's turn
+           == [ Played { Card = Three ^ Spade; Effect = Interrupt; Player = Player 3 }] @>
+
+[<Fact>]
+let ``After an interrupt, game continues as if nothing happened``() =
+    test 
+        <@ [ GameStarted { FirstCard = Three ^ Club ; Effect = Next; Players = Players 4 }
+             Played { Card = Three ^ Spade; Effect = Next; Player = Player 1 }  // P1 3♠
+             Played { Card = Three ^ Spade; Effect = Interrupt; Player = Player 3 }
+             ]
+           => Play { Card = Four ^ Spade; Player = Player 2 } // this is P1's turn
+           == [ Played { Card = Four ^ Spade; Effect = Next; Player = Player 2 } ] @>
+
 
 // Step 16:
 // Missing an interrupt is not concidered as playing at the wrong turn.

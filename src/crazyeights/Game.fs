@@ -96,10 +96,17 @@ let decide command state =
 
         // for step 10, we have to check the player that is playing the card
         if s.Table.CurrentPlayer <> cmd.Player then
-            // oops this this not this players turn !!
-            [ WrongPlayerPlayed { Card = cmd.Card
-                                  Effect = CardEffect.ofCard cmd.Card
-                                  Player = cmd.Player}  ]
+            // check whether it's an interrupt:
+            if s.TopCard.Rank = cmd.Card.Rank && s.TopCard.Suit = cmd.Card.Suit then
+                // this is a valid interrupt, the card is played
+                [ Played { Card = cmd.Card
+                           Effect = Interrupt
+                           Player = cmd.Player}]
+            else
+                // oops this this not this players turn !!
+                [ WrongPlayerPlayed { Card = cmd.Card
+                                      Effect = CardEffect.ofCard cmd.Card
+                                      Player = cmd.Player}  ]
         elif s.TopCard.Rank = cmd.Card.Rank || s.TopCard.Suit = cmd.Card.Suit then
             // this is same rank or same suit, the card is played
             // for step 13, we compute the effect of the card
