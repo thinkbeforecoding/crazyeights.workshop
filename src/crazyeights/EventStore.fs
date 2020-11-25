@@ -1,65 +1,82 @@
 module EventStore
 
 open System
-open EventStore.ClientAPI
 open System.Text
-open EventStore.ClientAPI.SystemData
+open EventStore.Client
+open System.Linq
+
 module Utf8 =
     let ofString input =
         Encoding.UTF8.GetBytes(input: string)
+        |> ReadOnlyMemory.op_Implicit
 
 
-    let toString data =
-        Encoding.UTF8.GetString(data: byte[])
+    let toString (data: ReadOnlyMemory<byte>) =
+        Encoding.UTF8.GetString(data.Span)
 
+
+// this is an implementation using grpc on version 20.6.1.0
+// to test locally, got to https://eventstore.com
+// and download version 20.6.1.0
+// then run it with the following command:
+// .\EventStore.ClusterNode.exe --insecure --mem-db --enable-atom-pub-over-http
+// you can see emitted events in the stream browser
 let createAsync() =
     async {
     let settings =
-        ConnectionSettings.Create()
-            .SetDefaultUserCredentials(UserCredentials("admin", "changeit"))
-            .Build()
-    let store = EventStoreConnection.Create(settings, Uri "tcp://localhost:1113")
-    do! store.ConnectAsync() |> Async.AwaitTask
+        EventStoreClientSettings.Create("esdb://localhost:2113?Tls=false");
+
+    let store = new EventStoreClient(settings)
     return store
     }
 
 let create() =
     createAsync() |> Async.RunSynchronously
 
-let readAsync (store: IEventStoreConnection) deserialize stream version =
+let readAsync (store: EventStoreClient) deserialize stream version =
     async {
 
-        let! slice = 
-            store.ReadStreamEventsForwardAsync(stream, version, 1000, true)
-            |> Async.AwaitTask
+        let result = 
+            store.ReadStreamAsync(Direction.Forwards, stream, version, 1000L)
+        let! readState = result.ReadState |> Async.AwaitTask
+        if readState = ReadState.StreamNotFound then
+            return StreamRevision.None , []
+        else
+            let! allEvents = result.ToListAsync().AsTask() |> Async.AwaitTask
+            
+            let lastEvent =
+                if allEvents.Count > 0 then
+                    allEvents.[allEvents.Count - 1].OriginalEventNumber
+                else
+                    version
 
-        let events =
-            [ for e in slice.Events do
-                yield! deserialize (e.Event.EventType, Utf8.toString e.Event.Data) ]
+            let events =
+                [ for e in allEvents do
+                    yield! deserialize (e.Event.EventType, Utf8.toString e.Event.Data) ]
 
-        return slice.LastEventNumber, events
+            return StreamRevision.FromStreamPosition lastEvent , events
     }
-let read (store: IEventStoreConnection) deserialize stream version =
+let read (store: EventStoreClient) deserialize stream version =
     readAsync store deserialize stream version
     |> Async.RunSynchronously
 
-let appendAsync (store: IEventStoreConnection) serialize stream expectedVersion events =
+let appendAsync (store: EventStoreClient) serialize stream (expectedVersion: StreamRevision) events =
     async {
     let eventData =
         [| for e in events do
             let eventType, data = serialize e
             yield EventData(
-                    Guid.NewGuid(),
+                    Uuid.NewUuid(),
                     eventType,
-                    true,
                     Utf8.ofString data,
-                    null)  |] 
+                    Nullable(),
+                    "application/json")  |] 
     let! result = 
         store.AppendToStreamAsync(stream, expectedVersion, eventData)
         |> Async.AwaitTask
-    return result.NextExpectedVersion }
+    return result.NextExpectedStreamRevision }
 
-let append (store : IEventStoreConnection) serialize stream expectedVersion events =
+let append (store : EventStoreClient) serialize stream expectedVersion events =
     appendAsync store serialize stream expectedVersion events
     |> Async.RunSynchronously
 

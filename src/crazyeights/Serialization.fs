@@ -73,11 +73,15 @@ module CardEffect =
         match effect with
         | Next -> "Next"
         | Skip -> "Skip"
+        | Flip -> "Flip"
+        | Interrupt -> "Interrupt"
 
     let deserialize effect =
         match effect with
         | "Next" -> Next
         | "Skip" -> Skip
+        | "Flip" -> Flip
+        | "Interrupt" -> Interrupt
         | _ -> failwith "Unknown effect"
 
 
@@ -127,6 +131,7 @@ let serialize =
     | Played e -> "Played", Json.serialize (Played.serialize e)
     | WrongCardPlayed e -> "WrongCardPlayed", Json.serialize (Played.serialize e)
     | WrongPlayerPlayed e -> "WrongPlayerPlayed", Json.serialize (Played.serialize e)
+    | InterruptMissed e -> "InterruptMissed", Json.serialize (Played.serialize e)
 
 
 let deserialize (eventType, data) =
@@ -135,4 +140,5 @@ let deserialize (eventType, data) =
     | "Played" -> [Json.deserialize Played Played.deserialize data]
     | "WrongCardPlayed" -> [Json.deserialize WrongCardPlayed Played.deserialize data]
     | "WrongPlayerPlayed" -> [Json.deserialize WrongPlayerPlayed Played.deserialize data]
+    | "InterruptMissed" -> [Json.deserialize InterruptMissed Played.deserialize data]
     | _ -> []
